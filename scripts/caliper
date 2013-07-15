@@ -1,9 +1,33 @@
 #!/bin/sh
 
-# rough
+# fail if any command fails
+set -e
 
+# 
 export PATH=$PATH:$JAVA_HOME/bin
-base=`dirname $0`
-export ALLOCATION_JAR=$base/lib/allocation.jar
-exec java -cp $base/lib/caliper-@VERSION@.jar:$ALLOCATION_JAR:$CLASSPATH com.google.caliper.Runner $*
+CALIPER_DIR=`dirname $0`
+CALIPER_MAIN=com.google.caliper.runner.CaliperMain
 
+if [ "--help" == "$1"  -o  "" == "$*" ] ; then
+  echo "Usage:"
+  echo ""
+  echo "     $0 benchmark_classname [options...]"
+  echo ""
+  echo "set the 'MVN_PRE' to run maven tasks before executing."
+  echo "For instance, in the examples/ directory of the caliper repo run"
+  echo ""
+  echo "     MVN_PRE=compile $0 examples.DemoBenchmark --print-config"
+  echo ""
+  echo "The runner takes the following arguments:"
+  mvn exec:java -Dexec.mainClass="$CALIPER_MAIN" -Dexec.args="--help"  2>&1 | grep -v '\[INFO\]' | tail -n +3
+else
+  if [ -n "$MVN_PRE" ] ; then
+    echo; echo "======= Running mvn $MVN_PRE"
+    echo mvn $MVN_PRE ; echo
+    mvn      $MVN_PRE
+  fi
+  echo; echo "======= Running caliper on $*"
+  echo mvn exec:java -Dexec.mainClass="$CALIPER_MAIN" -Dexec.args="$*" ; echo
+  time mvn exec:java -Dexec.mainClass="$CALIPER_MAIN" -Dexec.args="$*"
+  echo "======= Done!"
+fi
